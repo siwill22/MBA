@@ -330,7 +330,6 @@ def Forward_NoThermalAndPressureCorrection(FAAGrid, BathyGrid, SedThickGrid, X, 
 
     # Result
     gt = gt + FAAGrid
-    Gmra = gt
 
     return gt
 
