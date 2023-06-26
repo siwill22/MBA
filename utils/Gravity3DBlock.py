@@ -290,7 +290,7 @@ def MakeRegionalOCTGrid(X, Y, AgeGrid, s, continentAge):
 
 
 def Forward_NoThermalAndPressureCorrection(FAAGrid, BathyGrid, SedThickGrid, X, Y, 
-                                           phi0=0.55, c=4.5e-4):
+                                           rhoBackground = 2700, phi0=0.55, c=4.5e-4):
     """
     Remove the gravity effect of seawater and sediment layer from the free air anomaly.
 
@@ -325,13 +325,12 @@ def Forward_NoThermalAndPressureCorrection(FAAGrid, BathyGrid, SedThickGrid, X, 
     layers = np.concatenate([np.arange(0, 14100, 50), np.arange(14100, 20100, 100), np.arange(21000, 51000, 1000)]) / 1000
 
     # Calculate the gravity effect of seawater and sediment layer from free air anomaly
-    rhoBackground = 2700
     gt, mv = grav3dblock(X, Y, -BathyGrid, bsmt, layers, phi0, c, rhoBackground)
 
     # Result
-    gt = gt + FAAGrid
+    #gt = gt + FAAGrid
 
-    return gt
+    return gt, mv
 
 
 
