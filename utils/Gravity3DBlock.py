@@ -186,7 +186,7 @@ def DepthDependentDensity(z, phi0, c, RHOsg=2650, RHOw=1030):
 
 
 
-def AddThermalAndPressureCorrection(X, Y, AgeGrid, proj, CrustThickness, ZMoho, gt, filePathForTransitionArea=None):
+def AddThermalAndPressureCorrection(X, Y, AgeGrid, CrustThickness, ZMoho, gt):
     """
     Add the gravity effect of density change by thermal expansion at the lithospheric mantle (125km depth to Moho).
 
@@ -194,7 +194,6 @@ def AddThermalAndPressureCorrection(X, Y, AgeGrid, proj, CrustThickness, ZMoho, 
         X: X coordinates for the grid/3D model, in km.
         Y: Y coordinates for the grid/3D model, in km.
         AgeGrid: Oceanic crustal age. Its value is null at the continent.
-        proj: Projection information. For example, "Mercator".
         CrustThickness: Crust thickness from the normal gravity inversion (removing the gravity effect of seawater and sediment).
         ZMoho: Moho interface grid, in km.
         gt: Residual gravity anomaly by conventional methods (constant mantle density).
@@ -211,13 +210,15 @@ def AddThermalAndPressureCorrection(X, Y, AgeGrid, proj, CrustThickness, ZMoho, 
     BetaGrid[~np.isnan(AgeGrid)] = 1000
 
     # LITHOSPHERE THERMAL GRAVITY CORRECTION
+    '''
     if filePathForTransitionArea is not None:
         s = gpd.readfile(filePathForTransitionArea)
         iAgeGrid = MakeRegionalOCTGrid(X * 1000, Y * 1000, AgeGrid, s, 300)
         iAgeGrid = han3(iAgeGrid, 3)
     else:
-        AgeGrid[np.isnan(AgeGrid)] = 300
-        iAgeGrid = AgeGrid
+    '''
+    AgeGrid[np.isnan(AgeGrid)] = 300
+    iAgeGrid = AgeGrid
 
     # Lithospheric mantle density
     rho = 3300
