@@ -87,21 +87,22 @@ def bigbord(x, y, h):
     newy[m2:mm] = np.expand_dims(y[-1] + (np.arange(1, mm - m2 + 1) * dx), axis=1)
 
     newh[m1:m2, n1:n2] = h
+    print(m1,m2,n1,n2)
 
     # Linearly interpolate in the border
-    for i in np.arange(1, n1 - 1):
+    for i in np.arange(1, n1):
         alpha = (i - 1) / (n1 - 1)
-        newh[:, i] = (1 - alpha) * newh[:, 0] + alpha * newh[:, n1 - 1]
+        newh[:, i] = (1 - alpha) * newh[:, 0] + alpha * newh[:, n1]
 
-    for i in np.arange(n2, mm - 1):
+    for i in np.arange(n2, mm):
         alpha = (i - n2) / (mm - n2)
         newh[:, i] = (1 - alpha) * newh[:, n2 - 1] + alpha * newh[:, mm - 1]
 
-    for i in np.arange(1, m1 - 1):
+    for i in np.arange(1, m1):
         alpha = (i - 1) / (m1 - 1)
-        newh[i, :] = (1 - alpha) * newh[0, :] + alpha * newh[m1 - 1, :]
+        newh[i, :] = (1 - alpha) * newh[0, :] + alpha * newh[m1, :]
 
-    for i in np.arange(m2, mm - 1):
+    for i in np.arange(m2, mm):
         alpha = (i - m2) / (mm - m2)
         newh[i, :] = (1 - alpha) * newh[m2 - 1, :] + alpha * newh[mm - 1, :]
 
