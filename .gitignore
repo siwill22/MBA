@@ -162,3 +162,4 @@ cython_debug/
 grids/test_bat.nc
 grids/test_out.nc
 grids/tmp.nc
+notebooks/tmp.nc
