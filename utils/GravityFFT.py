@@ -1,5 +1,6 @@
 import math
 import numpy as np
+import xarray as xr
 
 
 def grdfft(xf, yf, tf):
@@ -117,17 +118,19 @@ def grdmask(x, y, t, xf, yf, tf):
     #   by the (presumably original) grid x,y,t
     #   NB ASSUMES SAME CELL SIZE FOR BOTH GRIDS
 
-    x0 = np.nonzero(np.absolute(x[0] - xf) == np.min(np.absolute(x[0] - xf)))[0][0]
-    y0 = np.nonzero(np.absolute(y[0] - yf) == np.min(np.absolute(y[0] - yf)))[0][0]
+    #x0 = np.nonzero(np.absolute(x[0] - xf) == np.min(np.absolute(x[0] - xf)))[0][0]
+    #y0 = np.nonzero(np.absolute(y[0] - yf) == np.min(np.absolute(y[0] - yf)))[0][0]
 
-    tmask = tf[y0:y0 + len(y), x0:x0 + len(x)]
-    tmask[np.isnan(t)] = np.nan
+    #tmask = tf[y0:y0 + len(y), x0:x0 + len(x)]
+    #tmask[np.isnan(t)] = np.nan
+    tmask = tf[yf[0]:yf[1], xf[0]:xf[1]]
 
     return tmask
 
 
 
-def parkergrav(x, y, z1, z2, rho, z0):
+def parkergrav(grid=None, x=None, y=None, z1=None, z2=20000, 
+               delta_rho=None, zref=0):
     '''
     [GravEffect] = parkergrav(x,y,z1,z2,RHO);
     Synthetic gravity response response for layer bounded by surfaces z1 and z2
@@ -141,7 +144,7 @@ def parkergrav(x, y, z1, z2, rho, z0):
                z0 = reference depth
     OUTPUTS: GravEffect = Gravity response of modelled layer
 
-    NB units MUST be metres and g/cc (1000 smaller than kg/m3)
+    NB units MUST be metres and kg/m3 ///////g/cc (1000 smaller than kg/m3)
     '''
 
     # for fast convergence, z0 is set to be midway between minimum 
@@ -150,10 +153,13 @@ def parkergrav(x, y, z1, z2, rho, z0):
     # 
     # z0 = max(max(z1));
 
-    z1 = z1 - z0
-    z2 = z2 - z0
+    if grid is not None:
+        x,y,z1 = xr2xyz(grid)        
 
-    print('z0 set to %s' % z0)
+    z1 = z1 - zref
+    z2 = z2 - zref
+
+    print('z0 set to %s' % zref)
 
     # Expand grid to avoid edge effects
     xf, yf, z1f = bigbord(x, y, z1)
@@ -167,20 +173,20 @@ def parkergrav(x, y, z1, z2, rho, z0):
     Gamma = 6.67e-11
     si2mg = 1e5
     Gamma = Gamma * si2mg
-    rho = rho * 1000    # Unit conversion, g/cc to kg/m3
+    #delta_rho = delta_rho * 1000    # Unit conversion, g/cc to kg/m3
 
     k = np.sqrt(np.power(kx, 2) + np.power(ky, 2))
     # note next term includes an upward continuation from z0 to z=0;
     # Blakely (p294) doesn't have a minus sign here, but need it if convention
     # is positive downwards
-    Const = 2 * math.pi * Gamma * np.exp(-k * z0)
+    Const = 2 * math.pi * Gamma * np.exp(-k * zref)
 
     numtaylor = 1
     tol = 8
     NthSum = np.zeros(z1f.shape)
 
     while numtaylor <= tol:
-        zf = (np.power(z1f, numtaylor)) * rho
+        zf = (np.power(z1f, numtaylor)) * delta_rho
         kx, ky, Zsp = grdfft(x, y, zf)
         Nthterm = (np.power(-k, numtaylor - 1) / math.factorial(numtaylor)) * Zsp
 
@@ -191,18 +197,25 @@ def parkergrav(x, y, z1, z2, rho, z0):
 
     # Trim off the expanded area of grid
     t = np.real(np.fft.ifft2(np.fft.ifftshift(NthSum)))
+
     t = grdmask(x, y, z1, xf, yf, t)
 
-    return t
+    if grid is not None:
+        return xr.DataArray(t, coords=grid.coords, name='z')
+    else:
+        return t
 
 
 
-def oldenburg(x, y, grv, delta_rho, zref, convergence_criteria=0.02):
+def oldenburg(x=None, y=None, grav=None, grid=None,
+              delta_rho=None, zref=0, convergence_criteria=0.02):
     '''
 
     '''
+    if grid is not None:
+        x,y,grav = xr2xyz(grid)
 
-    xf, yf, grvf = bigbord(x, y, grv)
+    xf, yf, grvf = bigbord(x, y, grav)
 
     kx, ky, grv_spec = grdfft(x, y, grvf)
     k = np.sqrt(np.power(kx, 2) + np.power(ky, 2))
@@ -232,9 +245,26 @@ def oldenburg(x, y, grv, delta_rho, zref, convergence_criteria=0.02):
         #print('finished iteration {:d}....'.format(numtaylor))
         numtaylor+=1
 
-    Z = grdmask(x,y,grv,xf,yf,Z); 
+    Z = grdmask(x,y,grav,xf,yf,Z); 
 
     #Zinv = (Z/km2m)+zref
     Zinv = Z+zref
 
-    return Zinv
+    if grid is not None:
+        return xr.DataArray(Zinv, coords=grid.coords, name='z')
+    else:
+        return Zinv
+    
+
+def xr2xyz(da):
+    if not isinstance(da, xr.DataArray):
+        raise TypeError('Unexpected type {:s} for data input'.format(type(da)))
+    else:
+        coord_keys = [key for key in da.coords.keys()]
+        x = da.coords[coord_keys[0]].data
+        y = da.coords[coord_keys[1]].data
+        z = da.data
+
+    return x,y,z
+
+
